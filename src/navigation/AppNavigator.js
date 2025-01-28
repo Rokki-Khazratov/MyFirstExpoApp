@@ -7,6 +7,8 @@ import HomeScreen from '../screens/HomeScreen';
 import ContactScreen from '../screens/ContactScreen';
 import LoginScreen from '../screens/LoginScreen';
 import EditPlantationScreen from '../screens/EditPlantationScreen';
+import PlantationDetailScreen from '../screens/PlantationDetailScreen'; // Импорт вашего экрана PlantationDetail
+
 
 const Drawer = createDrawerNavigator();
 
@@ -74,6 +76,7 @@ const AppNavigator = () => {
         <Drawer.Screen name="Home" component={HomeScreen} />
         <Drawer.Screen name="Contact" component={ContactScreen} />
         <Drawer.Screen name="EditPlantation" component={EditPlantationScreen} />
+        <Drawer.Screen name="PlantationDetail" component={PlantationDetailScreen} />
       </Drawer.Navigator>
     </NavigationContainer>
   );

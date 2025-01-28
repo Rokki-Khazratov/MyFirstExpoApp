@@ -5,41 +5,44 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const HomeScreen = ({ navigation }) => {
   const [plantations, setPlantations] = useState([]);
   const [district, setDistrict] = useState('');
-  const [nextPage, setNextPage] = useState(null);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
-    fetchPlantations();
-  }, []);
-
-  const fetchPlantations = async (url = 'http://127.0.0.1:8000/api/plantations/forme/') => {
-    try {
-      setLoading(true);
-      const token = await AsyncStorage.getItem('token');
-      const response = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const data = await response.json();
-      setPlantations((prevPlantations) => [...prevPlantations, ...data.results]);
-      setNextPage(data.next);
-      if (data.results.length > 0 && !district) {
-        const districtName = data.results[0]?.district;
-        setDistrict(`${districtName.region} - ${districtName.name}`);
+    const fetchPlantations = async () => {
+      try {
+        const token = await AsyncStorage.getItem('token');
+        const response = await fetch(`http://127.0.0.1:8000/api/plantations/forme/`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const data = await response.json();
+  
+        // Проверяем, есть ли данные
+        if (data && data.results) {
+          if (page === 1) {
+            setPlantations(data.results);
+          } else {
+            setPlantations((prev) => [...prev, ...data.results]);
+          }
+  
+          if (data.results.length > 0 && page === 1) {
+            const districtName = data.results[0]?.district || {};
+            setDistrict(`${districtName.region || 'N/A'} - ${districtName.name || 'N/A'}`);
+          }
+        } else {
+          console.error('Некорректный формат ответа:', data);
+        }
+      } catch (error) {
+        console.error('Ошибка при загрузке плантаций:', error);
       }
-    } catch (error) {
-      console.error('Error fetching plantations:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleLoadMore = () => {
-    if (nextPage && !loading) {
-      fetchPlantations(nextPage);
-    }
-  };
+    };
+  
+    fetchPlantations();
+  }, [page]);
+  
 
   const handleEdit = (id) => {
     navigation.navigate('EditPlantation', { plantationId: id });
@@ -62,9 +65,19 @@ const HomeScreen = ({ navigation }) => {
     }
   };
 
+  const handleLoadMore = () => {
+    if (!loading) {
+      fetchPlantations(page + 1);
+    }
+  };
+
   const renderFooter = () => {
     if (!loading) return null;
-    return <ActivityIndicator size="large" color="#007BFF" style={{ marginVertical: 16 }} />;
+    return (
+      <View style={styles.loadingFooter}>
+        <ActivityIndicator size="large" color="#007BFF" />
+      </View>
+    );
   };
 
   return (
@@ -79,13 +92,19 @@ const HomeScreen = ({ navigation }) => {
             <Text style={styles.cardTitle}>{item.district.name}</Text>
             <Text>Region: {item.district.region}</Text>
             <Text>Established Year: {item.garden_established_year}</Text>
-            <Text>Total Area: {item.total_area} ha</Text>
+            <Text>Total Area: {item.total_area} GA</Text>
             <View style={styles.actions}>
               <TouchableOpacity
                 style={styles.editButton}
                 onPress={() => handleEdit(item.id)}
               >
                 <Text style={styles.actionText}>Edit</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.moreButton}
+                onPress={() => navigation.navigate('PlantationDetail', { plantationId: item.id })}
+              >
+                <Text style={styles.actionText}>More</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.deleteButton}
@@ -147,6 +166,11 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 8,
   },
+  moreButton: {
+    backgroundColor: '#FFA500',
+    padding: 8,
+    borderRadius: 8,
+  },
   deleteButton: {
     backgroundColor: '#FF5C5C',
     padding: 8,
@@ -155,6 +179,10 @@ const styles = StyleSheet.create({
   actionText: {
     color: '#fff',
     fontWeight: 'bold',
+  },
+  loadingFooter: {
+    paddingVertical: 16,
+    alignItems: 'center',
   },
 });
 
